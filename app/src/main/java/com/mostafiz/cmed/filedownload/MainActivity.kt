@@ -15,6 +15,7 @@ import android.os.Environment
 import android.provider.Settings
 import android.util.Log
 import android.view.LayoutInflater
+import android.view.View
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
@@ -22,6 +23,8 @@ import androidx.core.net.toUri
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import com.mostafiz.cmed.filedownload.Constants.Companion.CMED_SP
+import com.mostafiz.cmed.filedownload.Constants.Companion.Current_Id
+import com.mostafiz.cmed.filedownload.Constants.Companion.Total_File_Size
 import com.mostafiz.cmed.filedownload.Constants.Companion.URl
 import com.mostafiz.cmed.filedownload.databinding.ActivityMainBinding
 import com.mostafiz.cmed.filedownload.databinding.DialogAskPermissionBinding
@@ -74,9 +77,39 @@ class MainActivity : AppCompatActivity() {
         sharedPref = getSharedPreferences(CMED_SP, MODE_PRIVATE)
         editor = sharedPref.edit()
 
+        downloadId = sharedPref.getLong(Current_Id, -1L)
+
+        if (downloadId != -1L) {
+            binding.downloadButton.isEnabled = false
+            bytesTotal = sharedPref.getLong(Total_File_Size, 0L)
+            getCurrentProgress()
+        }
 
         initViews()
         permissionCheck()
+
+        progress.observe(this) {
+
+
+            if (it >= 100) {
+                runOnUiThread {
+                    binding.downloadButton.isEnabled = true
+                    binding.statusTv.visibility = View.VISIBLE
+                    binding.statusTv.text = "Download Complete"
+                    clearCache()
+                    _progress.postValue(0)
+                }
+            } else if (it < 1) {
+                runOnUiThread {
+                    binding.statusTv.visibility = View.INVISIBLE
+                }
+            } else {
+                runOnUiThread {
+                    binding.statusTv.visibility = View.VISIBLE
+                    binding.statusTv.text = "Downloading"
+                }
+            }
+        }
 
     }
 
@@ -95,13 +128,14 @@ class MainActivity : AppCompatActivity() {
         getContentLength(URl)
 
         downloadId = downloadFile(URl)
+        editor.putLong(Current_Id, downloadId).apply()
     }
 
 
 
     private fun getContentLength(url: String) {
 
-        val gfgThread = Thread {
+        val outerThread = Thread {
             try {
                 val client = OkHttpClient()
                 val request = Request.Builder().url(url).build()
@@ -110,7 +144,7 @@ class MainActivity : AppCompatActivity() {
 
                 bytesTotal = response.body?.contentLength() ?: 0
 
-
+                editor.putLong(Total_File_Size, bytesTotal).apply()
                 getCurrentProgress()
 
             } catch (e: java.lang.Exception) {
@@ -118,7 +152,7 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        gfgThread.start()
+        outerThread.start()
     }
 
 
@@ -126,7 +160,7 @@ class MainActivity : AppCompatActivity() {
 
 
     private fun getCurrentProgress() {
-        val gfgThread2 = Thread {
+        val innerThread = Thread {
             while (progress.value!! < 100) {
                 getProgress()
                 try {
@@ -136,7 +170,7 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         }
-        gfgThread2.start()
+        innerThread.start()
     }
 
 
@@ -161,16 +195,22 @@ class MainActivity : AppCompatActivity() {
     }
 
 
-
-    fun downloadFile(url: String) :Long {
+    private fun downloadFile(url: String): Long {
         val request = DownloadManager.Request(url.toUri())
             .setAllowedNetworkTypes(DownloadManager.Request.NETWORK_WIFI)
             .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
             .addRequestHeader("Authorization", "Bearer <token>")
-            .setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, "CMED_demo_video.mp4")
-         return downloadManager.enqueue(request)
+            .setDestinationInExternalPublicDir(
+                Environment.DIRECTORY_DOWNLOADS,
+                "CMED_demo_video.mp4"
+            )
+        return downloadManager.enqueue(request)
     }
 
+
+    private fun clearCache() {
+        editor.clear().apply()
+    }
 
     private fun askPermission() {
         val dialogBuilder = AlertDialog.Builder(this)
