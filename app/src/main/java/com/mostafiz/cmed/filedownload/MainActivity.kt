@@ -4,12 +4,16 @@ import android.Manifest
 import android.annotation.SuppressLint
 import android.app.AlertDialog
 import android.app.DownloadManager
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.os.Environment
 import android.provider.Settings
@@ -17,15 +21,20 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
+import androidx.core.app.NotificationCompat
+import androidx.core.app.NotificationManagerCompat
 import androidx.core.net.toUri
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import com.mostafiz.cmed.filedownload.Constants.Companion.CMED_SP
 import com.mostafiz.cmed.filedownload.Constants.Companion.Current_Id
+import com.mostafiz.cmed.filedownload.Constants.Companion.ProgressChannel
 import com.mostafiz.cmed.filedownload.Constants.Companion.Total_File_Size
 import com.mostafiz.cmed.filedownload.Constants.Companion.URl
+import com.mostafiz.cmed.filedownload.Constants.Companion.notificationId
 import com.mostafiz.cmed.filedownload.databinding.ActivityMainBinding
 import com.mostafiz.cmed.filedownload.databinding.DialogAskPermissionBinding
 import okhttp3.OkHttpClient
@@ -99,11 +108,7 @@ class MainActivity : AppCompatActivity() {
                     clearCache()
                     _progress.postValue(0)
                 }
-            } else if (it < 1) {
-                runOnUiThread {
-                    binding.statusTv.visibility = View.INVISIBLE
-                }
-            } else {
+            } else if (it > 0) {
                 runOnUiThread {
                     binding.statusTv.visibility = View.VISIBLE
                     binding.statusTv.text = "Downloading"
@@ -211,6 +216,63 @@ class MainActivity : AppCompatActivity() {
     private fun clearCache() {
         editor.clear().apply()
     }
+
+
+    override fun onResume() {
+        super.onResume()
+        try {
+            cancelLeaveNotification()
+        } catch (e: Exception) {
+            Log.d("DismissNotification", "error: " + e.message)
+        }
+    }
+
+    @RequiresApi(Build.VERSION_CODES.O)
+    override fun onPause() {
+        super.onPause()
+        if (progress.value!! > 0) {
+            createNotificationChannel()
+            showLeaveNotification()
+        }
+
+    }
+
+    @RequiresApi(Build.VERSION_CODES.O)
+    private fun createNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channelName = "App Leave Channel"
+            val importance = NotificationManager.IMPORTANCE_DEFAULT
+            val channel = NotificationChannel(ProgressChannel, channelName, importance)
+
+            val notificationManager =
+                getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            notificationManager.createNotificationChannel(channel)
+        }
+    }
+
+    private fun showLeaveNotification() {
+        val notificationBuilder =
+            NotificationCompat.Builder(this, ProgressChannel).setContentTitle("Download Ongoing")
+                .setContentText("You file is being downloaded")
+                .setSmallIcon(R.drawable.ic_launcher_foreground)
+                .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+                .setAutoCancel(true)  // Auto-cancel when clicked
+
+        val notificationManager = NotificationManagerCompat.from(this)
+        if (ActivityCompat.checkSelfPermission(
+                this, Manifest.permission.POST_NOTIFICATIONS
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            return
+        }
+        notificationManager.notify(notificationId, notificationBuilder.build())
+    }
+
+    private fun cancelLeaveNotification() {
+        val notificationManager = NotificationManagerCompat.from(this)
+        notificationManager.cancel(notificationId)
+    }
+
 
     private fun askPermission() {
         val dialogBuilder = AlertDialog.Builder(this)
