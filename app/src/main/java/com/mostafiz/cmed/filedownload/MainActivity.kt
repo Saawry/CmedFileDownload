@@ -1,6 +1,7 @@
 package com.mostafiz.cmed.filedownload
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.app.AlertDialog
 import android.app.DownloadManager
 import android.content.Intent
@@ -18,14 +19,25 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.net.toUri
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.MutableLiveData
 import com.mostafiz.cmed.filedownload.Constants.Companion.CMED_SP
 import com.mostafiz.cmed.filedownload.Constants.Companion.URl
 import com.mostafiz.cmed.filedownload.databinding.ActivityMainBinding
 import com.mostafiz.cmed.filedownload.databinding.DialogAskPermissionBinding
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.Response
 
 class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
+
+    var downloadId = -1L
+    var bytesTotal = 0L
+
+    private var _progress = MutableLiveData<Int>()
+    val progress: LiveData<Int> = _progress
 
 
 
@@ -53,6 +65,9 @@ class MainActivity : AppCompatActivity() {
         binding= ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        _progress.postValue(0)
+
+
 
         downloadManager = this.getSystemService(DownloadManager::class.java)
 
@@ -71,20 +86,89 @@ class MainActivity : AppCompatActivity() {
 
         binding.downloadButton.setOnClickListener {
             binding.downloadButton.isEnabled = false
-            downloadFile(URl)
+            startDownload()
         }
+    }
+
+
+    private fun startDownload() {
+        getContentLength(URl)
+
+        downloadId = downloadFile(URl)
+    }
+
+
+
+    private fun getContentLength(url: String) {
+
+        val gfgThread = Thread {
+            try {
+                val client = OkHttpClient()
+                val request = Request.Builder().url(url).build()
+
+                val response: Response = client.newCall(request).execute()
+
+                bytesTotal = response.body?.contentLength() ?: 0
+
+
+                getCurrentProgress()
+
+            } catch (e: java.lang.Exception) {
+                e.printStackTrace()
+            }
+        }
+
+        gfgThread.start()
     }
 
 
 
 
-    fun downloadFile(url: String) {
+
+    private fun getCurrentProgress() {
+        val gfgThread2 = Thread {
+            while (progress.value!! < 100) {
+                getProgress()
+                try {
+                    Thread.sleep(500)
+                } catch (e: InterruptedException) {
+                    e.printStackTrace()
+                }
+            }
+        }
+        gfgThread2.start()
+    }
+
+
+
+    @SuppressLint("Range")
+    private fun getProgress() {
+        val query = DownloadManager.Query().setFilterById(downloadId)
+        val cursor = downloadManager.query(query)
+
+        if (cursor.moveToFirst()) {
+            val bytesDownloaded =
+                cursor.getLong(cursor.getColumnIndex(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR))
+
+            _progress.postValue((bytesDownloaded * 100 / bytesTotal).toInt())
+            runOnUiThread {
+                binding.progressTv.text = progress.value.toString() + "/100"
+                binding.downloadedTotalTv.text = "Downloaded (kb): " + bytesDownloaded.toString()
+                binding.simpleProgressBar.progress = progress.value!!
+            }
+        }
+        cursor.close()
+    }
+
+
+
+    fun downloadFile(url: String) :Long {
         val request = DownloadManager.Request(url.toUri())
             .setAllowedNetworkTypes(DownloadManager.Request.NETWORK_WIFI)
             .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
             .addRequestHeader("Authorization", "Bearer <token>")
             .setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, "CMED_demo_video.mp4")
-         downloadManager.enqueue(request)
+         return downloadManager.enqueue(request)
     }
 
 
