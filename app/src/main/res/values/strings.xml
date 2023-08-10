@@ -7,4 +7,12 @@
     <string name="cancel">Cancel</string>
     <string name="storage_permission">Storage Permission is needed</string>
     <string name="storage_permission_disclosure">App needs to access storage to save the downloaded file.</string>
+
+    <string name="status">Status</string>
+    <string name="link_url">Link Url</string>
+    <string name="link_below">Link Below</string>
+    <string name="download_total">Total Download</string>
+    <string name="progress">Progress</string>
+    <string name="download">Download</string>
+    <string name="file_downloaded">File Downloaded</string>
 </resources>

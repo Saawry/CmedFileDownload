@@ -6,13 +6,99 @@
     android:layout_height="match_parent"
     tools:context=".MainActivity">
 
-    <TextView
+    <com.google.android.material.textview.MaterialTextView
+        android:id="@+id/textView2"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Hello World!"
+        android:text="@string/link_below"
+        android:textColor="@color/black"
+        app:layout_constraintBottom_toTopOf="@+id/linkTv"
+        app:layout_constraintEnd_toEndOf="@+id/linkTv"
+        app:layout_constraintHorizontal_bias="0.0"
+        app:layout_constraintStart_toStartOf="@+id/linkTv" />
+
+    <com.google.android.material.textview.MaterialTextView
+        android:id="@+id/linkTv"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="24dp"
+        android:layout_marginEnd="24dp"
+        android:hint="@string/link_url"
+        android:maxLines="1"
+        android:padding="6dp"
+        android:singleLine="true"
+        android:textSize="12sp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintVertical_bias="0.060000002" />
+
+
+    <com.google.android.material.textview.MaterialTextView
+        android:id="@+id/statusTv"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="36dp"
+        android:text="@string/status"
+        app:layout_constraintEnd_toEndOf="@id/linkTv"
+        app:layout_constraintHorizontal_bias="0.0"
+        app:layout_constraintStart_toStartOf="@id/linkTv"
+        app:layout_constraintTop_toBottomOf="@id/linkTv" />
+
+    <ProgressBar
+        android:id="@+id/simpleProgressBar"
+        style="@style/Widget.AppCompat.ProgressBar.Horizontal"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        app:layout_constraintEnd_toEndOf="@id/linkTv"
+        app:layout_constraintStart_toStartOf="@+id/linkTv"
+        app:layout_constraintTop_toBottomOf="@+id/statusTv"
+        app:layout_constraintVertical_bias="0.13999999" />
+
+
+    <androidx.appcompat.widget.LinearLayoutCompat
+        android:id="@+id/progressTvsLayout"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        app:layout_constraintEnd_toEndOf="@id/simpleProgressBar"
+        app:layout_constraintStart_toStartOf="@id/simpleProgressBar"
+        app:layout_constraintTop_toBottomOf="@id/simpleProgressBar">
+
+        <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/downloadedTotalTv"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="@string/download_total"
+            android:textColor="@color/black"
+            android:textSize="12sp" />
+
+
+        <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/progressTv"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="@string/progress"
+            android:textColor="@color/black"
+            android:textSize="12sp" />
+
+
+    </androidx.appcompat.widget.LinearLayoutCompat>
+
+
+    <Button
+        android:id="@+id/downloadButton"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_margin="16dp"
+        android:layout_weight="1"
+        android:text="@string/download"
+        android:textAllCaps="false"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

@@ -2,25 +2,30 @@ package com.mostafiz.cmed.filedownload
 
 import android.Manifest
 import android.app.AlertDialog
+import android.app.DownloadManager
 import android.content.Intent
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
 import android.net.Uri
-import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import android.os.Environment
 import android.provider.Settings
 import android.util.Log
 import android.view.LayoutInflater
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
+import androidx.core.net.toUri
 import com.mostafiz.cmed.filedownload.Constants.Companion.CMED_SP
+import com.mostafiz.cmed.filedownload.Constants.Companion.URl
+import com.mostafiz.cmed.filedownload.databinding.ActivityMainBinding
 import com.mostafiz.cmed.filedownload.databinding.DialogAskPermissionBinding
 
 class MainActivity : AppCompatActivity() {
 
-
+    private lateinit var binding: ActivityMainBinding
 
 
 
@@ -41,18 +46,46 @@ class MainActivity : AppCompatActivity() {
             this::onPermissionGranted
         )
 
-
+    lateinit var downloadManager: DownloadManager
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
+        binding= ActivityMainBinding.inflate(layoutInflater)
+        setContentView(binding.root)
+
+
+        downloadManager = this.getSystemService(DownloadManager::class.java)
 
         sharedPref = getSharedPreferences(CMED_SP, MODE_PRIVATE)
         editor = sharedPref.edit()
+
+
+        initViews()
         permissionCheck()
 
     }
 
+    private fun initViews() {
+
+        binding.linkTv.text = URl
+
+        binding.downloadButton.setOnClickListener {
+            binding.downloadButton.isEnabled = false
+            downloadFile(URl)
+        }
+    }
+
+
+
+
+    fun downloadFile(url: String) {
+        val request = DownloadManager.Request(url.toUri())
+            .setAllowedNetworkTypes(DownloadManager.Request.NETWORK_WIFI)
+            .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
+            .addRequestHeader("Authorization", "Bearer <token>")
+            .setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, "CMED_demo_video.mp4")
+         downloadManager.enqueue(request)
+    }
 
 
     private fun askPermission() {
